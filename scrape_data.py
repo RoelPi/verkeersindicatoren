@@ -28,6 +28,8 @@ wegen['stad'] = ['Gent','Gent','Brussel','Brussel','Gent','Gent','Antwerpen','An
 
 wegen.to_csv('legende.csv', index = False, quoting = csv.QUOTE_ALL)
 
+
+# Volume
 pdData = []
 timer = 0
 for year in range(2010,2019):
@@ -45,4 +47,24 @@ data = data.sort_values(by = ['identifier','jaar','maand'])
 data.identifier = data.identifier.astype(str)
 data = data.merge(wegen, on = 'identifier')
 
-data.to_csv('all.csv', index = False, quoting = csv.QUOTE_ALL)
+data.to_csv('all_volume.csv', index = False, quoting = csv.QUOTE_ALL)
+
+# Verzadiging
+pdData = []
+timer = 0
+for year in range(2010,2019):
+    for month in range(1,12):
+        data = requests.get('http://indicatoren.verkeerscentrum.be/vc.indicators.web.gui/verzadigingsgraadIndicator/visualmapData?criteria={"ruimtelijke_aggregatie":"4","dagtype_id":"10","dagdeel_id":"1","voertuigklasse_id":"dummy","wegcategorie_groepid":"1","visualmapType":"month","month":' + str(month) + ',"year":' + str(year) + '}')
+        jsonData = json.loads(data.text)
+        pdData.append(pd.DataFrame(jsonData['dataList'], columns = ['identifier','verzadiging']))
+        pdData[timer]['jaar'] = year
+        pdData[timer]['maand'] = month
+        timer = timer + 1
+
+data = pd.concat(pdData)
+data = data.sort_values(by = ['identifier','jaar','maand'])
+
+data.identifier = data.identifier.astype(str)
+data = data.merge(wegen, on = 'identifier')
+
+data.to_csv('all_verzadiging.csv', index = False, quoting = csv.QUOTE_ALL)
