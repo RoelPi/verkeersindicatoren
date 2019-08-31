@@ -1,14 +1,32 @@
 import json
 import requests
 import pandas as pd
+import csv
+
+pd.set_option('precision', 0)
 
 meta = requests.get('http://indicatoren.verkeerscentrum.be/geoserver/VC2017/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=VC2017:Simplified_Buffer_2560&maxFeatures=5000&outputFormat=application%2Fjson')
 jsonMeta = json.loads(meta.text)
-print()
-wegen = []
-for f in jsonMeta:
-    wegen.append([f['features'][1]['properties']['OBJECTID'],f['features'][1]['properties']['Wegcategor'],f['features'][1]['properties']['SG_naam']])
 
+wegen = [[str(f['properties']['SG_ID']).replace('.0',''),f['properties']['Wegcategor'],f['properties']['SG_naam']] for f in jsonMeta['features']]
+wegen = pd.DataFrame(wegen, columns = ['identifier','wegcategorie','naam'])
+
+wegen = wegen[wegen.naam.str.contains('Wetteren tot Merelbeke|'
+    'Merelbeke tot Wetteren|'
+    'Ternat tot Parking|'
+    'Groot-Bijgaarden tot Ternat|'
+    'Destelbergen tot Beervelde|'
+    'Beervelde tot Destelbergen|'
+    'Wilrijk tot U|'
+    'A. tot Wilrijk|'
+    'Zwijndrecht tot Kruibeke|'
+    'Kruibeke tot Zwijndrecht|'
+    'Machelen tot Vilvoorde-Koningslo|'
+    'Cargo tot Zemst', regex = True)]
+wegen.identifier = wegen.identifier.astype(str)
+wegen['stad'] = ['Gent','Gent','Brussel','Brussel','Gent','Gent','Antwerpen','Antwerpen','Antwerpen','Antwerpen','Brussel','Brussel']
+
+wegen.to_csv('legende.csv', index = False, quoting = csv.QUOTE_ALL)
 
 pdData = []
 timer = 0
@@ -22,4 +40,9 @@ for year in range(2010,2019):
         timer = timer + 1
 
 data = pd.concat(pdData)
-data.to_csv('all.csv')
+data = data.sort_values(by = ['identifier','jaar','maand'])
+
+data.identifier = data.identifier.astype(str)
+data = data.merge(wegen, on = 'identifier')
+
+data.to_csv('all.csv', index = False, quoting = csv.QUOTE_ALL)
